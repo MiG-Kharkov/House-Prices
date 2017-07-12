@@ -91,6 +91,17 @@ sqrt(mean(( res.valid$pred - valid.y$logSalePrice)**2))
 
 
 # Predictions for test set ------------------------------------------------
+set.seed(123)
+resGLM = glmnet(as.matrix(train.x), train.y$logSalePrice, lambda = .001, alpha = 1)
+set.seed(123)
+resGBM = gbm.fit(train.x, train.y$logSalePrice, distribution = "gaussian", n.trees = 2000, interaction.depth = 5, shrinkage = .005, n.minobsinnode = 15)
+
+res = data.frame(
+  gbm   = predict(resGBM, train.x, n.trees = 2000),
+  lasso = as.vector(predict(resGLM, as.matrix(train.x)))
+)
+train_stack.x = cbind(train.x, res[, c("lasso", "gbm")])
+resRF = randomForest(x = train_stack.x, y = train.y$logSalePrice, ntree = 1000)
 
 pred_lasso = predict(resGLM, as.matrix(dataset[set == "test", colnames(train.x), with = F]))
 pred_gbm = predict(resGBM, as.matrix(dataset[set == "test", colnames(train.x), with = F]), n.trees = 2000)
@@ -99,6 +110,9 @@ tmp = data.frame(pred_lasso, pred_gbm)
 colnames(tmp) = c("lasso", "gbm")
 
 tmp = cbind(dataset[set == "test", colnames(train.x), with = F], tmp)
+
+
+
 pred_rf = predict(resRF, tmp)
 pred_rf = exp(pred_rf)
 
